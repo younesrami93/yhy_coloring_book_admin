@@ -14,7 +14,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
     Route::post('/generate', [GenerationApiController::class, 'store']);
-    // Check Status (Poll)
+    Route::get('/generations', [GenerationApiController::class, 'index']);
     Route::get('/generate/{id}', [GenerationApiController::class, 'show']);
 
 });

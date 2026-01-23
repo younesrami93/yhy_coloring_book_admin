@@ -50,15 +50,15 @@ class AuthController extends Controller
             }
             
             // 2. If no social, try to find Guest via Device UUID
-            // (Only if we didn't just log in via social)
             if (!$user) {
                 // Check if this device is already linked to a user
                 $device = Device::where('device_uuid', $request->device_uuid)->first();
                 
-                if ($device) {
+                // FIX: Check if device exists AND user exists (handle soft-deleted users)
+                if ($device && $device->user) {
                     $user = $device->user;
                 } else {
-                    // Create brand new Guest
+                    // Create brand new Guest if device unknown OR user was deleted
                     $user = AppUser::create([
                         'name' => 'Guest-' . substr($request->device_uuid, 0, 6),
                         'is_guest' => true,
@@ -71,7 +71,7 @@ class AuthController extends Controller
             Device::updateOrCreate(
                 ['device_uuid' => $request->device_uuid],
                 [
-                    'app_user_id' => $user->id,
+                    'app_user_id' => $user->id, // Now safe: $user is guaranteed to be set
                     'fcm_token' => $request->fcm_token,
                     'platform' => $request->platform,
                     'language' => $request->language ?? 'en',

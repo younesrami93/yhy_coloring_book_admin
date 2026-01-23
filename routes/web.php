@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\GenerationController;
 use App\Http\Controllers\Admin\StyleController;
+use Aws\S3\S3Client;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AdminAuthController;
 
@@ -21,4 +22,40 @@ Route::prefix('admin')->group(function () {
         Route::post('logout', [AdminAuthController::class, 'logout'])->name('logout');
         Route::get('/generations', [GenerationController::class, 'index'])->name('generations.index');
     });
+});
+
+Route::get('/debug-r2-raw', function () {
+    try {
+        $client = new S3Client([
+            'region' => 'auto',
+            'version' => 'latest',
+            'endpoint' => env('R2_ENDPOINT'),
+            'credentials' => [
+                'key' => env('R2_ACCESS_KEY_ID'),
+                'secret' => env('R2_SECRET_ACCESS_KEY'),
+            ],
+            'use_path_style_endpoint' => true,
+        ]);
+        
+        $client->putObject([
+            'Bucket' => env('R2_BUCKET'),
+            'Key' => 'raw_debug.txt',
+            'Body' => 'This is a test from the raw client.',
+        ]);
+        
+        return "✅ Success! The issue is in Laravel Config, not the Connection.";
+    } catch (\Exception $e) {
+        return "❌ REAL ERROR: " . $e->getMessage();
+    }
+});
+
+Route::get('/test-r2', function () {
+    try {
+        // Attempt to upload a simple text file
+        Storage::disk('r2')->put('test_connection.txt', 'Hello Cloudflare R2!');
+        return '✅ SUCCESS! File uploaded. URL: ' . Storage::disk('r2')->url('test_connection.txt');
+    } catch (\Exception $e) {
+        // Show the FULL technical error
+        return '❌ ERROR: ' . $e->getMessage();
+    }
 });

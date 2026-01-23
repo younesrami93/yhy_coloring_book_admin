@@ -50,7 +50,7 @@ class NanoBananaService
             $taskId = $response->json()['data']['taskId'] ?? null;
 
             if (!$taskId) {
-                Log::error('Nano Banana: No Task ID returned.');
+                Log::error('Nano Banana: No Task ID. Full Response: ' . $response->body());
                 return null;
             }
 

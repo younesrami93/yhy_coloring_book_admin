@@ -69,18 +69,22 @@ class StyleController extends Controller
     }
 
     // Helper to Resize and Save
+
     private function uploadAndResize($file, $size)
     {
         $filename = uniqid() . '.' . $file->getClientOriginalExtension();
-        $path = storage_path('app/public/styles/' . $filename);
+        $path = 'styles/' . $filename;
 
-        // Ensure directory exists
-        if (!file_exists(dirname($path)))
-            mkdir(dirname($path), 0777, true);
+        // Resize using Intervention (v3 syntax)
+        $encoded = Image::read($file)
+            ->scaleDown(width: $size)
+            ->toPng(); // Convert to PNG or keep original format
 
-        // Resize (Scale Down keeps aspect ratio)
-        Image::read($file)->scaleDown(width: $size)->save($path);
+        // Upload to R2
+        Storage::disk('r2')->put($path, (string) $encoded);
 
-        return asset('storage/styles/' . $filename);
+        // Return the Public R2 URL
+        return Storage::disk('r2')->url($path);
     }
+
 }
