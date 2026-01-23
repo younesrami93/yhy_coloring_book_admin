@@ -18,3 +18,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/generate/{id}', [GenerationApiController::class, 'show']);
 
 });
+
+// test route , print some json text
+Route::get('/test-json', function () {
+    return response()->json([
+        'message' => '
+This is a test JSON response from the API.',
+        'status' => 'success',
+    ]);
+});
