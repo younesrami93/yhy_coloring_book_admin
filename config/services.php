@@ -36,5 +36,23 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
+    // --- ADD THESE ---
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_REDIRECT_URI'), // Not strictly used for token flow but required by config
+        'guzzle' => [
+            'verify' => false, // ⚠️ Disables SSL verification (Localhost only)
+        ],
+    ],
+
+    'facebook' => [
+        'client_id' => env('FACEBOOK_CLIENT_ID'),
+        'client_secret' => env('FACEBOOK_CLIENT_SECRET'),
+        'redirect' => env('FACEBOOK_REDIRECT_URI'),
+        'guzzle' => [
+            'verify' => false, // ⚠️ Disables SSL verification (Localhost only)
+        ],
+    ],
 
 ];

@@ -59,3 +59,32 @@ Route::get('/test-r2', function () {
         return '❌ ERROR: ' . $e->getMessage();
     }
 });
+
+
+
+Route::get('/update-app', function () {
+    chdir(base_path());
+
+    $commands = [
+        // 1. Discard manual changes on the server (Force clean)
+        'git reset --hard HEAD 2>&1',
+
+        // 2. Pull the latest code
+        'git pull origin main 2>&1',
+
+        // 3. Maintenance commands
+        'composer install --no-dev --optimize-autoloader 2>&1',
+        'php artisan migrate --force 2>&1',
+        'php artisan config:clear 2>&1',
+        'php artisan route:clear 2>&1',
+        'php artisan view:clear 2>&1',
+    ];
+
+    $output = '';
+    foreach ($commands as $command) {
+        $output .= "$ $command\n";
+        $output .= shell_exec($command) . "\n";
+    }
+
+    return response("<pre>$output</pre>");
+});
