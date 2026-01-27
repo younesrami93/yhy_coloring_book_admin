@@ -55,4 +55,8 @@ return [
         ],
     ],
 
+    'fcm' => [
+        'key' => env('FCM_SERVER_KEY'), // Optional: Keep empty if using JSON file
+    ],
+
 ];
