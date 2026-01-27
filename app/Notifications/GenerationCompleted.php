@@ -8,7 +8,8 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
 use NotificationChannels\Fcm\FcmChannel;
 use NotificationChannels\Fcm\FcmMessage;
-use NotificationChannels\Fcm\Resources\Notification as FcmNotification; // Only import this one
+use NotificationChannels\Fcm\Resources\Notification as FcmNotification; 
+use Str;// Only import this one
 
 class GenerationCompleted extends Notification implements ShouldQueue
 {
@@ -29,12 +30,12 @@ class GenerationCompleted extends Notification implements ShouldQueue
     public function toFcm($notifiable)
     {
         // 1. Prepare Data
-        $imageUrl = $this->generation->processed_thumb_md ?? $this->generation->processed_image_url;
-        $promptPreview = \Illuminate\Support\Str::limit($this->generation->prompt_used, 50);
+        $imageUrl = $this->generation->processed_thumb_md ?? $this->generation->processed_thumb_sm;
+        $promptPreview = Str::limit($this->generation->prompt_used, 50);
 
         // 2. Create Message using generic arrays (Avoids "Class Not Found" errors)
         return FcmMessage::create()
-            ->setData([
+            ->Data([
                 'click_action' => 'FLUTTER_NOTIFICATION_CLICK',
                 'type' => 'generation_completed',
                 'generation_id' => (string) $this->generation->id,
@@ -42,9 +43,9 @@ class GenerationCompleted extends Notification implements ShouldQueue
             ])
             ->setNotification(
                 FcmNotification::create()
-                    ->setTitle('Your Art is Ready! 🎨')
-                    ->setBody("Finished: \"$promptPreview\"")
-                    ->setImage($imageUrl)
+                    ->title('Your Art is Ready! 🎨')
+                    ->body("Finished: \"$promptPreview\"")
+                    ->image($imageUrl)
             )
             // 3. Use 'custom' to pass Android/iOS specific config as raw arrays
             ->custom([
