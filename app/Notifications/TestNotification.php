@@ -20,19 +20,22 @@ class TestNotification extends Notification
     public function toFcm($notifiable)
     {
         return FcmMessage::create()
-            ->setData([
+            // CHANGE 1: Use 'data' instead of 'setData'
+            ->data([
                 'type' => 'test_notification',
                 'click_action' => 'FLUTTER_NOTIFICATION_CLICK',
             ])
-            ->setNotification(
+            // CHANGE 2: Use 'notification' instead of 'setNotification' (if setNotification fails too)
+            ->notification(
                 FcmNotification::create()
-                    ->setTitle('Test Notification 🔔')
-                    ->setBody('If you can read this, your FCM setup is working perfectly!')
+                    ->title('Test Notification 🔔') // 'setTitle' -> 'title' (sometimes required in older versions)
+                    ->body('If you can read this, your FCM setup is working perfectly!')
             )
+            // CHANGE 3: The 'custom' method usually works, but if it fails, remove it for a simple test first.
             ->custom([
                 'android' => [
                     'notification' => [
-                        'color' => '#10B981', // Green color for success
+                        'color' => '#10B981',
                     ],
                 ],
                 'apns' => [
