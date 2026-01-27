@@ -41,7 +41,7 @@ class GenerationCompleted extends Notification implements ShouldQueue
                 'generation_id' => (string) $this->generation->id,
                 'status' => 'completed',
             ])
-            ->setNotification(
+            ->notification(
                 FcmNotification::create()
                     ->title('Your Art is Ready! 🎨')
                     ->body("Finished: \"$promptPreview\"")
