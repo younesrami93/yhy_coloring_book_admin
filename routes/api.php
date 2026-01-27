@@ -20,7 +20,7 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 // test route , print some json text
-Route::get('/test-json', function () {
+    Route::get('/test-json', function () {
     return response()->json([
         'message' => '
 This is a test JSON response from the API.',

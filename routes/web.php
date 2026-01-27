@@ -2,6 +2,9 @@
 
 use App\Http\Controllers\Admin\GenerationController;
 use App\Http\Controllers\Admin\StyleController;
+use App\Http\Controllers\Api\RevenueCatWebhookController;
+use App\Models\AppUser;
+use App\Notifications\TestNotification;
 use Aws\S3\S3Client;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AdminAuthController;
@@ -61,6 +64,8 @@ Route::get('/test-r2', function () {
 });
 
 
+Route::post('/webhooks/revenuecat', [RevenueCatWebhookController::class, 'handle']);
+
 
 Route::get('/update-app', function () {
     chdir(base_path());
@@ -87,4 +92,35 @@ Route::get('/update-app', function () {
     }
 
     return response("<pre>$output</pre>");
+});
+
+
+
+Route::get('/test-notification', function () {
+    // 1. Find all users who have at least one device connected
+    $users = AppUser::has('devices')->get();
+
+    if ($users->isEmpty()) {
+        return response()->json([
+            'status' => 'error', 
+            'message' => 'No users with devices found in the database.'
+        ]);
+    }
+
+    // 2. Send the notification to each of them
+    foreach ($users as $user) {
+        try {
+            $user->notify(new TestNotification());
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to send: ' . $e->getMessage()
+            ]);
+        }
+    }
+
+    return response()->json([
+        'status' => 'success', 
+        'message' => "Notification sent to {$users->count()} users!"
+    ]);
 });

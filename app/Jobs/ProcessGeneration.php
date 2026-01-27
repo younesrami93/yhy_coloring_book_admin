@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Generation;
+use App\Notifications\GenerationCompleted;
 use App\Services\NanoBananaService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -73,6 +74,16 @@ class ProcessGeneration implements ShouldQueue
         $encodedSm = $image->scaleDown(width: 200)->toWebp(quality: 80);
         $smPath = 'generations/results/thumbs/' . $baseName . '_sm.webp';
         Storage::disk('r2')->put($smPath, (string) $encodedSm, 'public');
+
+
+        try {
+            if ($this->generation->user) {
+                $this->generation->user->notify(new GenerationCompleted($this->generation));
+            }
+        } catch (\Exception $e) {
+            // Log error but don't fail the job (image is already generated)
+            Log::error("Failed to send notification: " . $e->getMessage());
+        }
 
 
         // 4. Mark Complete & Update All URLs
