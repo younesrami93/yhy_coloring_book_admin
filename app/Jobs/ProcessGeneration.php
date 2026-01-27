@@ -65,7 +65,7 @@ class ProcessGeneration implements ShouldQueue
         Storage::disk('r2')->put($mainPath, (string) $encodedMain, 'public');
         // B. Create MD Thumbnail (500px)
 
-        
+
         $encodedMd = $image->scaleDown(width: 500)->toWebp(quality: 80);
         $mdPath = 'generations/results/thumbs/' . $baseName . '_md.webp';
         Storage::disk('r2')->put($mdPath, (string) $encodedMd, 'public');
@@ -74,6 +74,17 @@ class ProcessGeneration implements ShouldQueue
         $encodedSm = $image->scaleDown(width: 200)->toWebp(quality: 80);
         $smPath = 'generations/results/thumbs/' . $baseName . '_sm.webp';
         Storage::disk('r2')->put($smPath, (string) $encodedSm, 'public');
+
+
+
+
+        // 4. Mark Complete & Update All URLs
+        $this->generation->update([
+            'status' => 'completed',
+            'processed_image_url' => $mainPath,
+            'processed_thumb_md' => $mdPath,
+            'processed_thumb_sm' => $smPath,
+        ]);
 
 
         try {
@@ -86,14 +97,6 @@ class ProcessGeneration implements ShouldQueue
         }
 
 
-        // 4. Mark Complete & Update All URLs
-        $this->generation->update([
-            'status' => 'completed',
-            'processed_image_url' => $mainPath,
-            'processed_thumb_md' => $mdPath,
-            'processed_thumb_sm' => $smPath,
-        ]);
-
         // 5. Deduct Credit
     }
 
@@ -104,7 +107,7 @@ class ProcessGeneration implements ShouldQueue
         $this->generation->update([
             'status' => 'failed',
         ]);
-        
+
         $this->generation->user->increment('credits', $this->generation->cost_in_credits);
 
         Log::error("Generation Job Failed: " . $exception->getMessage());

@@ -35,7 +35,7 @@ class GenerationCompleted extends Notification implements ShouldQueue
 
         // 2. Create Message using generic arrays (Avoids "Class Not Found" errors)
         return FcmMessage::create()
-            ->Data([
+            ->data([
                 'click_action' => 'FLUTTER_NOTIFICATION_CLICK',
                 'type' => 'generation_completed',
                 'generation_id' => (string) $this->generation->id,
