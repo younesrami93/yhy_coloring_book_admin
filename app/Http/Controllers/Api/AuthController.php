@@ -17,6 +17,8 @@ class AuthController extends Controller
 
 
 
+
+
     public function login(Request $request)
     {
         $request->validate([
@@ -39,12 +41,11 @@ class AuthController extends Controller
                 try {
                     $socialUser = Socialite::driver($request->provider)->stateless()->userFromToken($request->social_token);
 
-                    // A. Check if Social Account ALREADY EXISTS
+                    // A. Check for Existing Social Account
                     $user = AppUser::where('social_id', $socialUser->getId())
                         ->where('social_provider', $request->provider)
                         ->first();
 
-                    // Fallback: Link by email
                     if (!$user && $socialUser->getEmail()) {
                         $user = AppUser::where('email', $socialUser->getEmail())->first();
                         if ($user) {
@@ -56,11 +57,9 @@ class AuthController extends Controller
                         }
                     }
 
-                    // B. ROBUST GUEST FINDER (Fixing the issue)
-                    $guestUserOnDevice = null;
+                    // B. Check Device for existing Guest
                     $device = Device::where('device_uuid', $request->device_uuid)->first();
-
-                    // Manually check using app_user_id to avoid Relationship bugs
+                    $guestUserOnDevice = null;
                     if ($device && $device->app_user_id) {
                         $linkedUser = AppUser::find($device->app_user_id);
                         if ($linkedUser && $linkedUser->is_guest) {
@@ -69,16 +68,15 @@ class AuthController extends Controller
                     }
 
                     if ($user) {
-                        // === SCENARIO 1: ACCOUNT EXISTS ===
-                        // Prevent double-dipping.
+                        // === SCENARIO 1: EXISTING SOCIAL USER ===
+                        // If this device was holding a Guest, WIPE their credits to prevent double-dipping
                         if ($guestUserOnDevice && $guestUserOnDevice->id !== $user->id) {
                             $guestUserOnDevice->update(['credits' => 0]);
                         }
                     } else {
-                        // === SCENARIO 2: NEW REGISTRATION (The Fix) ===
-
+                        // === SCENARIO 2: NEW SOCIAL REGISTRATION ===
                         if ($guestUserOnDevice) {
-                            // [CONVERT]: We found the guest manually, now update them!
+                            // CONVERT Guest -> Social (Keep Credits)
                             $guestUserOnDevice->update([
                                 'name' => $socialUser->getName(),
                                 'email' => $socialUser->getEmail(),
@@ -89,7 +87,7 @@ class AuthController extends Controller
                             ]);
                             $user = $guestUserOnDevice;
                         } else {
-                            // [CREATE]: Truly new user
+                            // CREATE New User (Welcome Bonus)
                             $user = AppUser::create([
                                 'name' => $socialUser->getName(),
                                 'email' => $socialUser->getEmail(),
@@ -101,7 +99,6 @@ class AuthController extends Controller
                             ]);
                         }
                     }
-
                 } catch (\Exception $e) {
                     return response()->json(['message' => 'Social login failed.', 'error' => $e->getMessage()], 401);
                 }
@@ -113,7 +110,7 @@ class AuthController extends Controller
             if (!$user) {
                 $device = Device::where('device_uuid', $request->device_uuid)->first();
 
-                // Manual check again
+                // A. Try to Restore Existing Guest
                 if ($device && $device->app_user_id) {
                     $linkedUser = AppUser::find($device->app_user_id);
                     if ($linkedUser && $linkedUser->is_guest) {
@@ -121,22 +118,26 @@ class AuthController extends Controller
                     }
                 }
 
+                // B. Create New Guest (If restore failed)
                 if (!$user) {
+                    // [THE FIX]: If device exists, it was used by a Social account. No free credits.
+                    $credits = $device ? 0 : 3;
+
                     $user = AppUser::create([
                         'name' => 'Guest-' . substr($request->device_uuid, 0, 6),
                         'is_guest' => true,
-                        'credits' => 3
+                        'credits' => $credits // 0 if device known, 3 if new
                     ]);
                 }
             }
 
             // ====================================================
-            // 3. FINALIZE
+            // 3. FINALIZE (Link Device)
             // ====================================================
             Device::updateOrCreate(
                 ['device_uuid' => $request->device_uuid],
                 [
-                    'app_user_id' => $user->id, // Ensure this column name matches your DB
+                    'app_user_id' => $user->id,
                     'fcm_token' => $request->fcm_token,
                     'platform' => $request->platform,
                     'language' => $request->language ?? 'en',
