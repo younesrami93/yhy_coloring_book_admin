@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AppUserController;
 use App\Http\Controllers\Admin\GenerationController;
 use App\Http\Controllers\Admin\StyleController;
 use App\Http\Controllers\Api\RevenueCatWebhookController;
@@ -24,6 +25,9 @@ Route::prefix('admin')->group(function () {
         Route::resource('styles', StyleController::class);
         Route::post('logout', [AdminAuthController::class, 'logout'])->name('logout');
         Route::get('/generations', [GenerationController::class, 'index'])->name('generations.index');
+        Route::get('/users', [AppUserController::class, 'index'])->name('users.index');
+        Route::delete('/users/{id}', [AppUserController::class, 'destroy'])->name('users.destroy');
+        Route::post('/users/{id}/credits', [AppUserController::class, 'addCredits'])->name('users.add_credits');
     });
 });
 

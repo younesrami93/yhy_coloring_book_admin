@@ -135,7 +135,7 @@
                         <i class="fas fa-palette w-5"></i> Styles & Prompts
                     </a>
 
-                    <a href="#"
+                    <a href="{{ route('users.index') }}"
                         class="{{ request()->routeIs('users.*') ? 'active-nav' : 'text-slate-400 hover:bg-slate-800 hover:text-white' }} flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-md transition-colors">
                         <i class="fas fa-users w-5"></i> App Users
                     </a>
