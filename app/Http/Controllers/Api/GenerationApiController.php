@@ -95,20 +95,41 @@ class GenerationApiController extends Controller
     /**
      * Check status of a specific generation (Polling)
      */
-    public function show($id)
+
+    public function show(Request $request, $id)
     {
-        $generation = Generation::where('id', $id)
-            ->where('user_id', request()->user()->id)
-            ->firstOrFail();
+        $user = $request->user();
 
-        return response()->json([
+        // 1. Eager load 'style' to get the name (assuming you have a 'style()' relationship)
+        $generation = Generation::with('style')
+            ->where('id', $id)
+            ->where('user_id', $user->id)
+            ->first();
+
+        if (!$generation) {
+            return response()->json([
+                'message' => 'Generation not found.'
+            ], 404);
+        }
+
+        // 2. Map data strictly to match Flutter's Generation.fromJson
+        $responseData = [
             'id' => $generation->id,
+            // Ensure these accessors/columns return full URLs (e.g. using Storage::url())
+            'original_image_url' => $generation->original_image_url,
+            'original_thumb_sm' => $generation->original_thumb_sm,
+            'original_thumb_md' => $generation->original_thumb_md,
+            'processed_image_url' => $generation->processed_image_url,
+            'processed_thumb_sm' => $generation->processed_thumb_sm,
+            'processed_thumb_md' => $generation->processed_thumb_md,
+            'style_name' => $generation->style ? $generation->style->name : 'Unknown Style',
             'status' => $generation->status,
-            'result_url' => $generation->processed_image_url,
             'created_at' => $generation->created_at,
-        ]);
-    }
+        ];
 
+        // 3. Return wrapped in 'data' key for consistency with pagination
+        return response()->json(['data' => $responseData]);
+    }
 
     public function index(Request $request)
     {
