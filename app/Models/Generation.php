@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -96,6 +97,10 @@ class Generation extends Model
             ? Storage::disk('r2')->url($value)
             : $value
         );
+    }
+    protected function style(): BelongsTo
+    {
+        return $this->belongsTo(Style::class, 'style_name', 'title');
     }
 
 }
