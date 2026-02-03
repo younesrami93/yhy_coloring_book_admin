@@ -22,7 +22,7 @@ class AppUserController extends Controller
         }
 
         // Order by latest created
-        $users = $query->latest()->paginate(10);
+        $users = $query->latest()->paginate(20);
 
         return view('admin.users.index', compact('users'));
     }

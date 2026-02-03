@@ -16,6 +16,7 @@ class AuthController extends Controller
      */
 
 
+
     public function login(Request $request)
     {
         $request->validate([
@@ -31,62 +32,87 @@ class AuthController extends Controller
         return DB::transaction(function () use ($request) {
             $user = null;
 
-            // --- 1. HANDLE SOCIAL LOGIN ---
+            // ====================================================
+            // 1. HANDLE SOCIAL LOGIN
+            // ====================================================
             if ($request->has('provider')) {
                 try {
-                    // Verify Token
+                    // A. Verify Token with Social Provider
                     $socialUser = Socialite::driver($request->provider)
                         ->stateless()
                         ->userFromToken($request->social_token);
 
                     $socialId = $socialUser->getId();
                     $email = $socialUser->getEmail();
+                    $avatar = $socialUser->getAvatar();
+                    $name = $socialUser->getName();
 
-                    // A. Check if this Social Account already exists
+                    // B. Check if this Social Account ALREADY EXISTS
                     $user = AppUser::where('social_id', $socialId)
                         ->where('social_provider', $request->provider)
                         ->first();
 
-                    // B. Link by Email (Prevent duplicates)
+                    // Fallback: Link by email if exists
                     if (!$user && $email) {
                         $user = AppUser::where('email', $email)->first();
                         if ($user) {
-                            // Link existing email user to this social provider
                             $user->update([
                                 'social_id' => $socialId,
                                 'social_provider' => $request->provider,
-                                'avatar_url' => $user->avatar_url ?? $socialUser->getAvatar(),
+                                'avatar_url' => $user->avatar_url ?? $avatar,
                             ]);
                         }
                     }
 
-                    // C. NEW: Convert Guest to Social User
-                    // If the user doesn't exist yet, checking if they are currently a Guest
-                    if (!$user) {
-                        // Find the Guest User associated with this Device
-                        $device = Device::where('device_uuid', $request->device_uuid)->first();
+                    // C. Look for an existing GUEST on this device
+                    $device = Device::where('device_uuid', $request->device_uuid)->with('user')->first();
+                    $guestUserOnDevice = ($device && $device->user && $device->user->is_guest) ? $device->user : null;
 
-                        if ($device && $device->user) {
-                            // CONVERT GUEST -> SOCIAL USER
-                            $user = $device->user;
-                            $user->update([
-                                'name' => $socialUser->getName(),
+                    if ($user) {
+                        // ---------------------------------------------------------
+                        // SCENARIO: EXISTING ACCOUNT (Not Guest)
+                        // Rule: "Check for guest accounts and clear their credit"
+                        // ---------------------------------------------------------
+
+                        if ($guestUserOnDevice && $guestUserOnDevice->id !== $user->id) {
+                            // 1. Clear the Guest's credits (Prevent double dipping)
+                            $guestUserOnDevice->update(['credits' => 0]);
+
+                            // 2. Optional: We usually delete the guest or unlink the device
+                            // so they don't accidentally log back into it later.
+                            // But strictly following your rule: just clear credit.
+                        }
+
+                        // User is logged in, no credits added.
+
+                    } else {
+                        // ---------------------------------------------------------
+                        // SCENARIO: NEW SOCIAL LOGIN
+                        // Rule: "Found a guest login... dont create new user, just edit (convert)"
+                        // ---------------------------------------------------------
+
+                        if ($guestUserOnDevice) {
+                            // CASE A: CONVERT GUEST -> SOCIAL
+                            // We keep the ID, Credits, and Generations. We just change the identity.
+                            $guestUserOnDevice->update([
+                                'name' => $name,
                                 'email' => $email,
                                 'social_id' => $socialId,
                                 'social_provider' => $request->provider,
-                                'avatar_url' => $socialUser->getAvatar(),
-                                'is_guest' => false, // No longer a guest!
+                                'avatar_url' => $avatar,
+                                'is_guest' => false, // No longer a guest
                             ]);
+                            $user = $guestUserOnDevice;
                         } else {
-                            // D. Create Brand New User (No guest found, new device)
+                            // CASE B: BRAND NEW USER (No Guest found)
                             $user = AppUser::create([
-                                'name' => $socialUser->getName(),
+                                'name' => $name,
                                 'email' => $email,
                                 'social_id' => $socialId,
                                 'social_provider' => $request->provider,
+                                'avatar_url' => $avatar,
                                 'is_guest' => false,
-                                'avatar_url' => $socialUser->getAvatar(),
-                                'credits' => 3
+                                'credits' => 3 // Standard Welcome Bonus
                             ]);
                         }
                     }
@@ -99,13 +125,19 @@ class AuthController extends Controller
                 }
             }
 
-            // --- 2. HANDLE GUEST LOGIN (No Provider) ---
+            // ====================================================
+            // 2. HANDLE GUEST LOGIN (No Provider)
+            // ====================================================
             if (!$user) {
-                $device = Device::where('device_uuid', $request->device_uuid)->first();
+                // Rule: "Check if already a guest with the same device uid... login as it"
 
-                if ($device && $device->user) {
+                $device = Device::where('device_uuid', $request->device_uuid)->with('user')->first();
+
+                if ($device && $device->user && $device->user->is_guest) {
+                    // RESTORE EXISTING GUEST
                     $user = $device->user;
                 } else {
+                    // Rule: "No guest account related to him... continue normal and give 3 credits"
                     $user = AppUser::create([
                         'name' => 'Guest-' . substr($request->device_uuid, 0, 6),
                         'is_guest' => true,
@@ -114,8 +146,11 @@ class AuthController extends Controller
                 }
             }
 
-            // --- 3. SYNC DEVICE DATA ---
-            // Ensure this device is linked to the final determined user
+            // ====================================================
+            // 3. FINALIZATION
+            // ====================================================
+
+            // Link this device to the final User ID
             Device::updateOrCreate(
                 ['device_uuid' => $request->device_uuid],
                 [
@@ -127,7 +162,6 @@ class AuthController extends Controller
                 ]
             );
 
-            // Issue Token
             $token = $user->createToken('mobile-app')->plainTextToken;
 
             return response()->json([
@@ -137,7 +171,6 @@ class AuthController extends Controller
             ]);
         });
     }
-
     /**
      * Get Current User Data
      */
