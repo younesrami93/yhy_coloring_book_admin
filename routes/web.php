@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AppUserController;
+use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\GenerationController;
 use App\Http\Controllers\Admin\StyleController;
 use App\Http\Controllers\Api\RevenueCatWebhookController;
@@ -19,9 +20,7 @@ Route::prefix('admin')->group(function () {
 
     // Protected Routes
     Route::middleware('auth')->group(function () {
-        Route::get('dashboard', function () {
-            return view('admin.dashboard');
-        })->name('dashboard');
+        Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
         Route::resource('styles', StyleController::class);
         Route::post('logout', [AdminAuthController::class, 'logout'])->name('logout');
         Route::get('/generations', [GenerationController::class, 'index'])->name('generations.index');
