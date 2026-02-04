@@ -16,14 +16,15 @@
             </p>
         </div>
 
-        <div class="relative group z-20">
-            <button class="flex items-center gap-2 bg-white border border-slate-200 text-slate-700 px-4 py-2.5 rounded-lg shadow-sm hover:bg-slate-50 transition">
+        <div class="relative z-30">
+            <button id="dateDropdownBtn" onclick="toggleDateMenu()" 
+                class="flex items-center gap-2 bg-white border border-slate-200 text-slate-700 px-4 py-2.5 rounded-lg shadow-sm hover:bg-slate-50 transition select-none">
                 <i class="far fa-calendar-alt text-slate-400"></i>
                 <span class="text-sm font-medium">{{ $label }}</span>
                 <i class="fas fa-chevron-down text-xs ml-2 text-slate-400"></i>
             </button>
 
-            <div class="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-100 hidden group-hover:block animate-fade-in-up">
+            <div id="dateDropdownMenu" class="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-100 hidden animate-fade-in-up">
                 <div class="py-1">
                     <a href="?range=today" class="block px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-blue-600 {{ $range == 'today' ? 'bg-blue-50 text-blue-600' : '' }}">Today</a>
                     <a href="?range=yesterday" class="block px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-blue-600 {{ $range == 'yesterday' ? 'bg-blue-50 text-blue-600' : '' }}">Yesterday</a>
@@ -54,6 +55,7 @@
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        
         <div class="bg-white p-6 rounded-xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-slate-100 relative overflow-hidden">
             <div class="flex justify-between items-start z-10 relative">
                 <div>
@@ -72,7 +74,7 @@
         <div class="bg-white p-6 rounded-xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-slate-100 relative overflow-hidden">
             <div class="flex justify-between items-start z-10 relative">
                 <div>
-                    <p class="text-slate-500 text-sm font-medium mb-1">Credits Spent</p>
+                    <p class="text-slate-500 text-sm font-medium mb-1">Credits Consumed</p>
                     <h3 class="text-3xl font-bold text-slate-800">{{ number_format($creditsConsumed) }}</h3>
                 </div>
                 <div class="p-2 bg-amber-50 rounded-lg text-amber-600">
@@ -84,8 +86,8 @@
             </div>
         </div>
 
-        <div class="bg-white p-6 rounded-xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-slate-100 relative overflow-hidden">
-            <div class="flex justify-between items-start z-10 relative">
+        <div class="bg-white p-6 rounded-xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-slate-100 relative overflow-hidden group">
+            <div class="flex justify-between items-start z-10 relative mb-2">
                 <div>
                     <p class="text-slate-500 text-sm font-medium mb-1">New Users</p>
                     <h3 class="text-3xl font-bold text-slate-800">{{ number_format($newUsers) }}</h3>
@@ -94,9 +96,23 @@
                     <i class="fas fa-user-plus"></i>
                 </div>
             </div>
-            <div class="absolute -bottom-4 -right-4 text-purple-50 opacity-50 transform rotate-12">
-                <i class="fas fa-users text-8xl"></i>
+            
+            <div class="relative z-10 mt-3">
+                <div class="flex justify-between text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1">
+                    <span>Social ({{ $newSocial }})</span>
+                    <span>Guest ({{ $newGuests }})</span>
+                </div>
+                <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden flex">
+                    @if($newUsers > 0)
+                        <div class="bg-purple-500 h-full" style="width: {{ ($newSocial / $newUsers) * 100 }}%"></div>
+                        <div class="bg-slate-300 h-full" style="width: {{ ($newGuests / $newUsers) * 100 }}%"></div>
+                    @else
+                        <div class="bg-slate-100 h-full w-full"></div>
+                    @endif
+                </div>
             </div>
+            
+            <p class="mt-3 text-xs text-slate-400">Lifetime Total: <span class="font-semibold text-slate-600">{{ number_format($totalUsersLifetime) }}</span></p>
         </div>
 
         <div class="bg-white p-6 rounded-xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-slate-100 relative overflow-hidden">
@@ -109,6 +125,7 @@
                     <i class="fas fa-chart-line"></i>
                 </div>
             </div>
+            <p class="text-xs text-slate-400 mt-4">Based on generation status</p>
         </div>
     </div>
 
@@ -117,7 +134,7 @@
         <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-100">
             <div class="flex items-center justify-between mb-6">
                 <h3 class="font-bold text-slate-800">Generations Over Time</h3>
-                </div>
+            </div>
             <div class="relative h-72 w-full">
                 <canvas id="generationsChart"></canvas>
             </div>
@@ -171,11 +188,27 @@
 </div>
 
 <script>
-    function toggleCustomDate() {
-        $('#custom-date-box').slideToggle();
+    // --- Fix for Dropdown Menu ---
+    function toggleDateMenu() {
+        const menu = document.getElementById('dateDropdownMenu');
+        menu.classList.toggle('hidden');
     }
 
-    // Initialize Chart
+    function toggleCustomDate() {
+        document.getElementById('custom-date-box').classList.toggle('hidden');
+        document.getElementById('dateDropdownMenu').classList.add('hidden'); // Close dropdown
+    }
+
+    // Close dropdown when clicking outside
+    window.addEventListener('click', function(e) {
+        const btn = document.getElementById('dateDropdownBtn');
+        const menu = document.getElementById('dateDropdownMenu');
+        if (!btn.contains(e.target) && !menu.contains(e.target)) {
+            menu.classList.add('hidden');
+        }
+    });
+
+    // --- Chart Initialization ---
     const ctx = document.getElementById('generationsChart').getContext('2d');
     const chart = new Chart(ctx, {
         type: 'line',
@@ -190,7 +223,7 @@
                 pointBackgroundColor: '#ffffff',
                 pointBorderColor: '#2563eb',
                 fill: true,
-                tension: 0.4 // Smooth curves
+                tension: 0.4
             }]
         },
         options: {

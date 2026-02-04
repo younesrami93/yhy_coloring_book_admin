@@ -14,7 +14,7 @@ class DashboardController extends Controller
     public function index(Request $request)
     {
         // 1. Determine Date Range
-        $range = $request->input('range', '30d'); // Default to Last 30 Days
+        $range = $request->input('range', '30d');
         $customStart = $request->input('start');
         $customEnd = $request->input('end');
 
@@ -65,64 +65,48 @@ class DashboardController extends Controller
                 break;
         }
 
-        // 2. Fetch Key Metrics
+        // 2. Fetch Key Metrics (In Range)
         $totalGenerations = Generation::whereBetween('created_at', [$startDate, $endDate])->count();
-        
-        $creditsConsumed = Generation::whereBetween('created_at', [$startDate, $endDate])
-            ->sum('cost_in_credits');
+        $creditsConsumed = Generation::whereBetween('created_at', [$startDate, $endDate])->sum('cost_in_credits');
 
+        // User Stats (In Range)
         $newUsers = AppUser::whereBetween('created_at', [$startDate, $endDate])->count();
+        $newGuests = AppUser::whereBetween('created_at', [$startDate, $endDate])->where('is_guest', true)->count();
+        $newSocial = AppUser::whereBetween('created_at', [$startDate, $endDate])->where('is_guest', false)->count();
 
-        // Calculate "Success Rate" for this period
+        // User Stats (Lifetime)
+        $totalUsersLifetime = AppUser::count();
+
+        // Calculate "Success Rate"
         $totalAttempts = Generation::whereBetween('created_at', [$startDate, $endDate])->count();
-        $successful = Generation::whereBetween('created_at', [$startDate, $endDate])
-            ->where('status', 'completed') // Assuming 'completed' is your success status
-            ->count();
+        $successful = Generation::whereBetween('created_at', [$startDate, $endDate])->where('status', 'completed')->count();
         $successRate = $totalAttempts > 0 ? round(($successful / $totalAttempts) * 100) : 100;
 
-        // 3. Prepare Chart Data (Group by Date)
-        // We want a daily breakdown for the chart
+        // 3. Prepare Chart Data
         $chartData = Generation::selectRaw('DATE(created_at) as date, COUNT(*) as count')
             ->whereBetween('created_at', [$startDate, $endDate])
             ->groupBy('date')
             ->orderBy('date', 'asc')
             ->get();
 
-        // Fill in missing dates with 0 for the chart
         $chartLabels = [];
         $chartValues = [];
-        $period = new \DatePeriod(
-            $startDate->copy()->startOfDay(),
-            new \DateInterval('P1D'),
-            $endDate->copy()->endOfDay()
-        );
+        $period = new \DatePeriod($startDate->copy()->startOfDay(), new \DateInterval('P1D'), $endDate->copy()->endOfDay());
 
         foreach ($period as $date) {
             $formatted = $date->format('Y-m-d');
-            $chartLabels[] = $date->format('M d'); // Display format (e.g., "Jan 01")
-            
+            $chartLabels[] = $date->format('M d');
             $record = $chartData->firstWhere('date', $formatted);
             $chartValues[] = $record ? $record->count : 0;
         }
 
         // 4. Recent Activity
-        $recentGenerations = Generation::with('user')
-            ->latest()
-            ->take(5)
-            ->get();
+        $recentGenerations = Generation::with('user')->latest()->take(5)->get();
 
         return view('admin.dashboard', compact(
-            'totalGenerations', 
-            'creditsConsumed', 
-            'newUsers', 
-            'successRate', 
-            'recentGenerations',
-            'chartLabels',
-            'chartValues',
-            'range',
-            'label',
-            'startDate',
-            'endDate'
+            'totalGenerations', 'creditsConsumed', 'newUsers', 'newGuests', 'newSocial',
+            'totalUsersLifetime', 'successRate', 'recentGenerations',
+            'chartLabels', 'chartValues', 'range', 'label', 'startDate', 'endDate'
         ));
     }
 }
