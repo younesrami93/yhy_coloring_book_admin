@@ -140,7 +140,6 @@
                         <i class="fas fa-users w-5"></i> App Users
                     </a>
 
-                    <p class="px-4 text-xs font-semibold uppercase tracking-wider text-slate-500 mt-6 mb-2">System</p>
 
                 </nav>
 
