@@ -142,15 +142,6 @@
 
                     <p class="px-4 text-xs font-semibold uppercase tracking-wider text-slate-500 mt-6 mb-2">System</p>
 
-                    <a href="#"
-                        class="{{ request()->routeIs('logs.*') ? 'active-nav' : 'text-slate-400 hover:bg-slate-800 hover:text-white' }} flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-md transition-colors">
-                        <i class="fas fa-server w-5"></i> AI API Logs
-                    </a>
-                    <a href="#"
-                        class="{{ request()->routeIs('credits.*') ? 'active-nav' : 'text-slate-400 hover:bg-slate-800 hover:text-white' }} flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-md transition-colors">
-                        <i class="fas fa-coins w-5"></i> Credit Packages
-                    </a>
-
                 </nav>
 
                 <div class="p-4 border-t border-slate-800">
