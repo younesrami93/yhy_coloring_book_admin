@@ -123,11 +123,10 @@
                     <p class="px-4 text-xs font-semibold uppercase tracking-wider text-slate-500 mt-6 mb-2">App Management
                     </p>
 
-                    <a href="#"
+                    <a href="{{ route('generations.index') }}"
                         class="{{ request()->routeIs('generations.*') ? 'active-nav' : 'text-slate-400 hover:bg-slate-800 hover:text-white' }} flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-md transition-colors">
                         <i class="fas fa-images w-5"></i>
                         <span>Generations</span>
-                        <span class="ml-auto bg-blue-600 text-white text-xs py-0.5 px-2 rounded-full">New</span>
                     </a>
 
                     <a href="{{ route('styles.index') }}"
